@@ -2,7 +2,9 @@ import React, { useState, useRef } from 'react';
 import './index.css';
 import { CloudUploadOutlined, LinkOutlined } from '@ant-design/icons';
 import { Attachments, AttachmentsProps, Sender } from '@ant-design/x';
-import { Button, Flex, type GetProp, type GetRef, message } from 'antd';
+import { Button, Flex, type GetProp, type GetRef, } from 'antd';
+import { getTokenOrRefresh } from './token_util';
+import * as speechsdk from 'microsoft-cognitiveservices-speech-sdk';
 
 const App: React.FC = () => {
   const [open, setOpen] = useState<boolean>(false);
@@ -12,6 +14,31 @@ const App: React.FC = () => {
 
   const attachmentsRef = useRef<GetRef<typeof Attachments>>(null);
   const senderRef = useRef<GetRef<typeof Sender>>(null);
+
+  const sttFromMic = async () => {
+    try {
+      const tokenObj = await getTokenOrRefresh();
+      const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(tokenObj?.authToken, tokenObj?.region);
+      speechConfig.speechRecognitionLanguage = "en-US";
+      const audioConfig = speechsdk.AudioConfig.fromDefaultMicrophoneInput();
+      const recognizer = new speechsdk.SpeechRecognizer(speechConfig, audioConfig);
+
+      setText("Listening...");
+      
+      recognizer.recognizeOnceAsync(async (result) => {
+        if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
+          setText(result.text);
+        } else {
+          setText("Speech not recognized. Please try again.");
+        }
+      });
+    } catch (error) {
+      console.error("Speech recognition error:", error);
+      setText("Error starting speech recognition.");
+    }finally{
+      setRecording(false);
+    }
+  };
 
   const senderHeader = (
     <Sender.Header
@@ -83,7 +110,10 @@ const App: React.FC = () => {
         allowSpeech={{
           recording,
           onRecordingChange: (nextRecording: boolean) => {
-            message.info(`Mock Customize Recording: ${nextRecording}`);
+            console.log("Recording:", nextRecording);
+            if (nextRecording) {
+              sttFromMic();
+            }
             setRecording(nextRecording);
           },
         }}
