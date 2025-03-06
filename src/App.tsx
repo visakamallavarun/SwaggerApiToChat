@@ -1,13 +1,19 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./index.css";
 import {
   CloudUploadOutlined,
-  FireOutlined,
   LinkOutlined,
-  ReadOutlined,
   ShareAltOutlined,
 } from "@ant-design/icons";
-import { Attachments, AttachmentsProps, Bubble, Prompts, Sender, Welcome } from "@ant-design/x";
+import {
+  Attachments,
+  AttachmentsProps,
+  Bubble,
+  Sender,
+  useXAgent,
+  useXChat,
+  Welcome,
+} from "@ant-design/x";
 import { Button, Space, type GetProp, type GetRef } from "antd";
 import { getTokenOrRefresh } from "./token_util";
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
@@ -50,15 +56,41 @@ const useStyle = createStyles(({ token, css }) => {
       flex-direction: column;
       padding: ${token.paddingLG}px;
       gap: 16px;
+      position: relative;
     `,
     messages: css`
       flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      height: calc(100% - 160px); /* Adjust based on sender height */
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+
+      /* Remove justify-content: flex-end to allow scrolling to the top */
+      /* Instead, add padding at the top to ensure there's space to scroll */
+      padding-top: 20px;
+
+      /* Hide scrollbar for Chrome, Safari and Opera */
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Hide scrollbar for IE, Edge and Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+      scrollbar-width: none; /* Firefox */
     `,
     placeholder: css`
       padding-top: 32px;
     `,
     sender: css`
       box-shadow: ${token.boxShadow};
+      position: sticky;
+      bottom: 0%;
+      background: ${token.colorBgContainer};
+      margin-top: auto; /* Push to the bottom */
+      width: 100%;
     `,
     logo: css`
       display: flex;
@@ -91,18 +123,17 @@ const useStyle = createStyles(({ token, css }) => {
   };
 });
 
-const senderPromptsItems: GetProp<typeof Prompts, "items"> = [
-  {
-    key: "1",
-    description: "Hot Topics",
-    icon: <FireOutlined style={{ color: "#FF4D4F" }} />,
-  },
-  {
-    key: "2",
-    description: "Design Guide",
-    icon: <ReadOutlined style={{ color: "#1890FF" }} />,
-  },
-];
+type Message = {
+  id: string;
+  content: string;
+  role: "user" | "agent";
+};
+
+interface SwaggerResponse {
+  endpoint: string;
+  schema: string;
+  requiredValues: string[];
+}
 
 const App: React.FC = () => {
   const { styles } = useStyle();
@@ -110,18 +141,23 @@ const App: React.FC = () => {
   const [items, setItems] = useState<GetProp<AttachmentsProps, "items">>([]);
   const [text, setText] = useState<string>("");
   const [recording, setRecording] = useState<boolean>(false);
+  const [jsonContent, setJsonContent] = useState<string>("");
+  const [response, setResponse] = useState<SwaggerResponse | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const attachmentsRef = useRef<GetRef<typeof Attachments>>(null);
   const senderRef = useRef<GetRef<typeof Sender>>(null);
 
-  const onPromptsItemClick: GetProp<typeof Prompts, "onItemClick"> = (info) => {
-    setText(info.data.description as string);
-  };
-
   const openSwaggerBackendApiPage = () => {
     window.open("https://localhost:7049/swagger/index.html", "_blank"); // Open in a new tab
   };
-  
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Add this effect to scroll to bottom when messages change
+
   const placeholderNode = (
     <Space direction="vertical" size={16} className={styles.placeholder}>
       <Welcome
@@ -131,7 +167,10 @@ const App: React.FC = () => {
         description="Base on Ant Design, AGI product interface solution, create a better intelligent vision"
         extra={
           <Space>
-            <Button icon={<ShareAltOutlined />}onClick={openSwaggerBackendApiPage} />
+            <Button
+              icon={<ShareAltOutlined />}
+              onClick={openSwaggerBackendApiPage}
+            />
           </Space>
         }
       />
@@ -169,6 +208,151 @@ const App: React.FC = () => {
     }
   };
 
+  const handleFileRead = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      handleSend(content);
+      setJsonContent(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const fetchRequiredValues = async ({
+    endpointName,
+  }: {
+    endpointName: string;
+  }) => {
+    try {
+      const response = await fetch(
+        "https://localhost:7049/api/Swagger/get-required-values",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ jsonContent, endpointName }),
+        }
+      );
+      if (!response.ok) {
+        throw new Error("Error fetching required values");
+      }
+      const data: SwaggerResponse = await response.json();
+      setResponse(data);
+    } catch (error) {
+      console.error("Error fetching required values:", error);
+    }
+  };
+
+  const sendSpeechToApi = async () => {
+    try {
+      const payload = {
+        jsonContent,
+        swaggerResponse: response,
+        speechValue: messages[messages.length - 1].message.content,
+      };
+
+      console.log("Payload:", JSON.stringify(payload, null, 2));
+
+      const apiResponse = await fetch(
+        "https://localhost:7049/api/speech/callFeedback",
+        {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!apiResponse.ok) {
+        throw new Error(`HTTP error! Status: ${apiResponse.status}`);
+      }
+
+      const responseData = await apiResponse.text();
+      onRequest({
+        id: Date.now().toString(),
+        content: responseData,
+        role: "agent",
+      });
+    } catch (error) {
+      console.error("Error calling API:", error);
+    }
+  };
+
+  const renderMessage = (message: Message) => {
+    const handleBubbleClick = (content: string) => {
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        content,
+        role: "user",
+      };
+      onRequest(newMessage);
+    };
+
+    if (message.role === "agent") {
+      // Render agent's message with click handler
+      return (
+        <Bubble
+          key={message.id}
+          content={message.content}
+          onClick={() => handleBubbleClick(message.content)}
+          style={{ cursor: "pointer" }} // Add cursor pointer to indicate clickable
+        />
+      );
+    } else if (message.role === "user") {
+      // Render user's message with click handler
+      return (
+        <Bubble
+          key={message.id}
+          content={message.content}
+          placement="end" // Align user's message to the right
+        />
+      );
+    }
+    // Add more conditional renderings as needed
+  };
+
+  const handleSend = (content: string) => {
+    const message: Message = {
+      id: Date.now().toString(),
+      content,
+      role: "user",
+    };
+    onRequest(message);
+  };
+
+  const [agent] = useXAgent({
+    request: async (
+      { message }: { message?: Message },
+      {
+        onSuccess,
+        onError,
+      }: {
+        onSuccess: (response: Message) => void;
+        onError: (error: Error) => void;
+      }
+    ) => {
+      if (!message) {
+        onError(new Error("Message is undefined"));
+        return;
+      }
+      try {
+        // Mock API request
+        onSuccess({ id: "wd", content: message.content, role: "agent" });
+      } catch (error) {
+        onError(error as Error);
+      }
+    },
+  });
+
+  const { onRequest, messages } = useXChat<Message>({ agent });
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   const senderHeader = (
     <Sender.Header
       title="Attachments"
@@ -192,6 +376,9 @@ const App: React.FC = () => {
         items={items}
         onChange={({ fileList }) => {
           setItems(fileList.slice(0, 1)); // Restrict to only one file
+          if (fileList.length > 0) {
+            handleFileRead(fileList[0].originFileObj as File);
+          }
         }}
         placeholder={(type) =>
           type === "drop"
@@ -217,16 +404,14 @@ const App: React.FC = () => {
   return (
     <div className={styles.layout}>
       <div className={styles.chat}>
-      <Bubble.List
-          items={
-            // items.length > 0
-            //   ? items
-            //   : 
-            [{ content: placeholderNode, variant: 'borderless' }]
-          }
-          className={styles.messages}
+        <Bubble.List
+          items={[{ content: placeholderNode, variant: "borderless" }]}
         />
-        <Prompts items={senderPromptsItems} onItemClick={onPromptsItemClick} />
+        <div className={styles.messages}>
+          {messages.map((message) => renderMessage(message.message))}
+          <div ref={messagesEndRef} />{" "}
+          {/* This empty div will be our scroll target */}
+        </div>
         <Sender
           ref={senderRef}
           header={senderHeader}
@@ -246,6 +431,7 @@ const App: React.FC = () => {
           onSubmit={() => {
             setItems([]);
             setText("");
+            handleSend(text);
           }}
           allowSpeech={{
             recording,
