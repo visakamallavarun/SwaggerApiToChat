@@ -430,7 +430,7 @@ const App: React.FC = () => {
       ) {
         try {
           const data = await fetchRequiredValues({
-            endpointName: message.content.split(" ")[1],
+            endpointName: message.content,
           });
           if (data) {
             const responseContent = `## Endpoint: ${data.endpoint}  \n\n` +
