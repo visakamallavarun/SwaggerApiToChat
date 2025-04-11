@@ -18,6 +18,7 @@ import { Button, Space, type GetProp, type GetRef } from "antd";
 import { getTokenOrRefresh } from "./token_util";
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
 import { createStyles } from "antd-style";
+import ReactMarkdown from "react-markdown";
 
 const useStyle = createStyles(({ token, css }) => {
   return {
@@ -129,11 +130,6 @@ type Message = {
   role: "user" | "agent";
 };
 
-interface SwaggerResponse {
-  endpoint: string;
-  schema: string;
-  requiredValues: string[];
-}
 
 export type EndpointList = string[];
 
@@ -144,13 +140,12 @@ const App: React.FC = () => {
   const [text, setText] = useState<string>("");
   const [recording, setRecording] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  let swaggerResponse : SwaggerResponse;
 
   const attachmentsRef = useRef<GetRef<typeof Attachments>>(null);
   const senderRef = useRef<GetRef<typeof Sender>>(null);
 
   const openSwaggerBackendApiPage = () => {
-    window.open("https://localhost:7049/swagger/index.html", "_blank"); // Open in a new tab
+    window.open("https://fakerestapi.azurewebsites.net/index.html", "_blank"); // Open in a new tab
   };
 
   const scrollToBottom = () => {
@@ -195,7 +190,7 @@ const App: React.FC = () => {
 
       recognizer.recognizeOnceAsync(async (result) => {
         if (result.reason === speechsdk.ResultReason.RecognizedSpeech) {
-          setText(result.text+" Speech recognized");
+          setText(result.text);
         } else {
           setText("Speech not recognized. Please try again.");
         }
@@ -218,8 +213,8 @@ const App: React.FC = () => {
           console.log("Swagger JSON content saved to local storage");
           onRequest({
             id: Date.now().toString(),
-            content: "file uploaded", // This will be caught by our useXAgent handler
-            role: "user",
+            content: "File uploaded successfully.", // This will be caught by our useXAgent handler
+            role: "agent",
           });
         } catch (error) {
           console.error("Error saving to localStorage:", error);
@@ -230,149 +225,36 @@ const App: React.FC = () => {
     reader.readAsText(file);
   };
 
-  const fetchRequiredValues = async ({
-    endpointName,
-  }: {
-    endpointName: string;
-  }): Promise<SwaggerResponse | null> => {
-    try {
-      const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
-      if (!swaggerJsonContent) {
-        throw new Error(
-          "Swagger JSON content is not available in localStorage"
-        );
-      }
-      const swaggerJson = JSON.parse(swaggerJsonContent);
-      const response = await fetch(
-        "https://localhost:7049/api/Swagger/get-required-values",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ swaggerJson, endpointName }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error("Error fetching required values");
-      }
-      const data: SwaggerResponse = await response.json();
-      swaggerResponse = data;
-      return data; // Return the response data
-    } catch (error) {
-      console.error("Error fetching required values:", error);
-      return null; // Return null in case of error
-    }
-  };
-
-  const sendSpeechToApi = async ({message}:{message:Message}) => {
-    try {
-      const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
-      if (!swaggerJsonContent) {
-        throw new Error(
-          "Swagger JSON content is not available in localStorage"
-        );
-      }
-      const swaggerJson = JSON.parse(swaggerJsonContent);
-      const payload = {
-        swaggerJson,
-        swaggerResponse: swaggerResponse,
-        speechValue: message.content,
-      };
-
-      console.log("Payload:", JSON.stringify(payload, null, 2));
-
-      const apiResponse = await fetch(
-        "https://localhost:7049/api/speech/callFeedback",
-        {
-          method: "POST",
-          headers: {
-            Accept: "*/*",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!apiResponse.ok) {
-        throw new Error(`HTTP error! Status: ${apiResponse.status}`);
-      }
-
-      const responseData = await apiResponse.text();
-      onRequest({
-        id: Date.now().toString(),
-        content: responseData,
-        role: "agent",
-      });
-    } catch (error) {
-      console.error("Error calling API:", error);
-    }
-  };
-
-  const getEndpoints = async (): Promise<EndpointList> => {
-    try {
-      const payload = {
-        swaggerJson: JSON.parse(
-          localStorage.getItem("swaggerJsonContent") || ""
-        ),
-      };
-
-      console.log("Payload:", JSON.stringify(payload, null, 2));
-
-      const response = await fetch(
-        "https://localhost:7049/api/Swagger/getEndpoints",
-        {
-          method: "POST",
-          headers: {
-            Accept: "*/*",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-
-      const responseData: EndpointList = await response.json();
-      console.log("Endpoints fetched successfully:", responseData);
-      return responseData;
-    } catch (error) {
-      console.error("Error fetching endpoints:", error);
-      throw error;
-    }
-  };
-
   const renderMessage = (message: Message) => {
-    const handleBubbleClick = (content: string) => {
-      // const newMessage: Message = {
-      //   id: Date.now().toString(),
-      //   content,
-      //   role: "user",
-      // };
-      // onRequest(newMessage);
-      setText(content);
-    };
 
     if (message.role === "agent") {
-      // Render agent's message with click handler
+      // Render agent's message with click handler and markdown support
       return (
+        <>
         <Bubble
           key={message.id}
-          content={message.content}
-          onClick={() => handleBubbleClick(message.content)}
-          style={{ cursor: "pointer" }} // Add cursor pointer to indicate clickable
+          content={
+            <div className="markdown-content">
+              <ReactMarkdown>{message.content}</ReactMarkdown>
+            </div>
+          }
+          //onClick={() => handleBubbleClick(message.content)}
+          style={{ cursor: "pointer" }}
         />
+        <br/>
+        </>
       );
     } else if (message.role === "user") {
       // Render user's message with click handler
       return (
+        <>
         <Bubble
           key={message.id}
           content={message.content}
           placement="end" // Align user's message to the right
         />
+        <br/>
+        </>
       );
     }
     // Add more conditional renderings as needed
@@ -402,59 +284,55 @@ const App: React.FC = () => {
         onError(new Error("Message is undefined"));
         return;
       }
-
-      if (
-        message.content.toLowerCase().includes("file uploaded") &&
-        message.role === "user"
-      ) {
-        try {
-          const fetchedEndpoints = await getEndpoints();
-          // Use a unique ID for each endpoint by combining timestamp with index
-          fetchedEndpoints.forEach((endpoint, index) => {
-            console.log("Endpoint:", endpoint);
-            onRequest({
-              id: `${Date.now()}-${index}`, // Use combination of timestamp and index for uniqueness
-              content: endpoint,
-              role: "agent",
-            });
+    if (message.role === "user") {
+      try {
+        const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
+        
+        // Skip if no swagger JSON is available
+        if (!swaggerJsonContent) {
+          onSuccess({
+            id: Date.now().toString(),
+            content: "Please upload a Swagger JSON file first.",
+            role: "agent",
           });
-        } catch (error) {
-          console.error("Error fetching endpoints:", error);
-          onError(new Error("Failed to process the Swagger file. Please check the format and try again."));
+          return;
         }
-      }
-      else if (
-        (message.content.toLowerCase().includes("post") ||
-          messages.length === 1) &&
-        message.role === "user"
-      ) {
-        try {
-          const data = await fetchRequiredValues({
-            endpointName: message.content,
-          });
-          if (data) {
-            const responseContent = `## Endpoint: ${data.endpoint}  \n\n` +
-              `**Required values:**\n${data.requiredValues.length ? data.requiredValues.join(", ") : "None"}  \n\n` +
-              `**Schema:**\n\`\`\`json\n${data.schema}\n\`\`\``;
-
-            // Send response back to the chat
-            onSuccess({
-              id: `endpoint-${Date.now()}`, // Add prefix for endpoint responses
-              content: responseContent,
-              role: "agent",
-            });
-          } else {
-            onError(new Error("Could not retrieve information for this endpoint. Please try another endpoint."));
-          }
-        } catch (error) {
-          onError(error as Error);
+        
+        const swaggerJson = JSON.parse(swaggerJsonContent);
+        
+        // Prepare the request payload
+        const payload = {
+          text: message.content,
+          swaggerJson: swaggerJson
+        };
+        
+        // Call the swaggerChat endpoint
+        const response = await fetch("https://localhost:7049/api/speech/UnifiedChatbotHandler", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "*/*"
+          },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
         }
+        
+        const responseData = await response.text();
+        
+        // Send the AI response back to the chat
+        onSuccess({
+          id: `chat-${Date.now()}`,
+          content: responseData,
+          role: "agent"
+        });
+      } catch (error) {
+        console.error("Error calling swaggerChat API:", error);
+        onError(new Error("Failed to process your request. Please try again."));
       }
-      else if(
-        message.content.toLowerCase().includes("speech recognized") &&
-    message.role === "user"){
-        sendSpeechToApi({ message });
-      }
+    }
     },
   });
 
