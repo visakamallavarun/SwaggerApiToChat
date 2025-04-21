@@ -14,7 +14,7 @@ import {
   useXChat,
   Welcome,
 } from "@ant-design/x";
-import { Button, Layout, Space, type GetProp, type GetRef } from "antd";
+import { Button, Layout, Space, type GetProp, type GetRef, Collapse, Input,  Tag, Menu } from "antd";
 import { getTokenOrRefresh } from "./token_util";
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
 import { createStyles } from "antd-style";
@@ -133,6 +133,174 @@ type Message = {
 
 
 export type EndpointList = string[];
+
+const { Panel } = Collapse;
+
+const QueryStringComponent: React.FC = () => {
+  const [queryParams, setQueryParams] = useState<Record<string, string>>({
+    param1: "value1",
+    param2: "value2",
+    param3: "value3",
+  });
+
+  const [newKey, setNewKey] = useState<string>("");
+  const [newValue, setNewValue] = useState<string>("");
+
+  const handleAddQueryParam = () => {
+    if (newKey.trim() && newValue.trim()) {
+      setQueryParams((prev) => ({ ...prev, [newKey.trim()]: newValue.trim() }));
+      setNewKey("");
+      setNewValue("");
+    }
+  };
+
+  const handleDeleteQueryParam = (key: string) => {
+    setQueryParams((prev) => {
+      const updatedParams = { ...prev };
+      delete updatedParams[key];
+      return updatedParams;
+    });
+  };
+
+  const handleEditQueryParam = (key: string, value: string) => {
+    setQueryParams((prev) => ({ ...prev, [key]: value }));
+  };
+
+  return (
+    <div>
+      <h3>Query Parameters</h3>
+      <Collapse>
+        {Object.entries(queryParams).map(([key, value]) => (
+          <Panel
+            header={key}
+            key={key}
+            extra={
+              <Button
+                type="link"
+                danger
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteQueryParam(key);
+                }}
+              >
+                Delete
+              </Button>
+            }
+          >
+            <Input
+              value={value}
+              onChange={(e) => handleEditQueryParam(key, e.target.value)}
+            />
+          </Panel>
+        ))}
+      </Collapse>
+      <Input
+        placeholder="Key"
+        value={newKey}
+        onChange={(e) => setNewKey(e.target.value)}
+        style={{ marginTop: "8px" }}
+      />
+      <Input
+        placeholder="Value"
+        value={newValue}
+        onChange={(e) => setNewValue(e.target.value)}
+        style={{ marginTop: "8px" }}
+      />
+      <Button type="primary" style={{ marginTop: "8px" }} onClick={handleAddQueryParam}>
+        Add Query Param
+      </Button>
+    </div>
+  );
+};
+
+const DebugConsoleComponent: React.FC = () => {
+  const fakeResponses = [
+    { status: 200, body: "Success response from API" },
+    { status: 400, body: "Bad request error" },
+    { status: 500, body: "Internal server error" },
+    {
+      status: 200,
+      body: `{
+        "data": {
+          "id": 1,
+          "name": "Sample Data",
+          "description": "This is a detailed description of the response data.",
+          "nested": {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3"
+          }
+        },
+        "meta": {
+          "timestamp": "2023-01-01T00:00:00Z",
+          "status": "success"
+        }
+      }`,
+    },
+  ];
+
+  const getStatusColor = (status: number) => {
+    if (status >= 200 && status < 300) return "green";
+    if (status >= 400 && status < 500) return "orange";
+    if (status >= 500) return "red";
+    return "blue";
+  };
+
+  return (
+    <div
+      style={{
+        height: "100%",
+        overflowY: "auto",
+        border: "1px solid #ddd",
+        padding: "16px",
+        background: "#f9f9f9",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <h3>Debug Console</h3>
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        {fakeResponses.map((response, index) => (
+          <div
+            key={index}
+            style={{
+              marginBottom: "8px",
+              padding: "8px",
+              borderRadius: "4px",
+              background: "#fff",
+              border: `1px solid ${getStatusColor(response.status)}`,
+            }}
+          >
+            <Tag color={getStatusColor(response.status)}>{response.status}</Tag>
+            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{response.body}</pre>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const RightSiderContent: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<string>("query");
+
+  return (
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Menu
+        mode="horizontal"
+        selectedKeys={[activeTab]}
+        onClick={(e) => setActiveTab(e.key)}
+        style={{ marginBottom: "16px" }}
+      >
+        <Menu.Item key="query">Query Strings</Menu.Item>
+        <Menu.Item key="debug">Debug Console</Menu.Item>
+      </Menu>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        {activeTab === "query" && <QueryStringComponent />}
+        {activeTab === "debug" && <DebugConsoleComponent />}
+      </div>
+    </div>
+  );
+};
 
 const App: React.FC = () => {
   const { styles } = useStyle();
@@ -489,12 +657,12 @@ const App: React.FC = () => {
           collapsible
           collapsed={!rightSiderOpen}
           onCollapse={(collapsed) => setRightSiderOpen(!collapsed)}
-          width={300} // Increase sider width
+          width={400} // Increase sider width
           collapsedWidth={0} // Ensure the sider is completely closed
           style={{ background: "#fff" }}
           reverseArrow
         >
-          <div style={{ padding: "16px" }}>Right Sider Content</div>
+          <RightSiderContent />
         </Layout.Sider>
       </Layout>
     </Layout>
