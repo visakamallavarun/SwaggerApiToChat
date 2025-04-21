@@ -14,11 +14,12 @@ import {
   useXChat,
   Welcome,
 } from "@ant-design/x";
-import { Button, Space, type GetProp, type GetRef } from "antd";
+import { Button, Layout, Space, type GetProp, type GetRef } from "antd";
 import { getTokenOrRefresh } from "./token_util";
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
 import { createStyles } from "antd-style";
 import ReactMarkdown from "react-markdown";
+import { Content, Header } from "antd/es/layout/layout";
 
 const useStyle = createStyles(({ token, css }) => {
   return {
@@ -140,6 +141,8 @@ const App: React.FC = () => {
   const [text, setText] = useState<string>("");
   const [recording, setRecording] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [leftSiderOpen, setLeftSiderOpen] = useState<boolean>(true);
+  const [rightSiderOpen, setRightSiderOpen] = useState<boolean>(true);
 
   const attachmentsRef = useRef<GetRef<typeof Attachments>>(null);
   const senderRef = useRef<GetRef<typeof Sender>>(null);
@@ -391,50 +394,110 @@ const App: React.FC = () => {
   );
 
   return (
-    <div className={styles.layout}>
-      <div className={styles.chat}>
-        <Bubble.List
-          items={[{ content: placeholderNode, variant: "borderless" }]}
-        />
-        <div className={styles.messages}>
-          {messages.map((message) => renderMessage(message.message))}
-          <div ref={messagesEndRef} />{" "}
-          {/* This empty div will be our scroll target */}
+    <Layout className={styles.layout}>
+      <Header
+        style={{
+          position: "fixed",
+          top: 0,
+          zIndex: 1000,
+          width: "100%",
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 24px",
+          background: "#001529",
+          color: "#fff",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <img
+            src="ais.svg"
+            alt="AIS Logo"
+            style={{ height: "40px", marginRight: "16px" }}
+          />
+          <text
+            style={{
+              fontSize: "18px",
+              fontWeight: "bold",
+              color: "#fff",
+              marginTop: "8px",
+              marginLeft: "20px",
+            }}
+          >
+            AIS Chat
+          </text>
         </div>
-        <Sender
-          ref={senderRef}
-          header={senderHeader}
-          prefix={
-            <Button
-              type="text"
-              icon={<LinkOutlined />}
-              onClick={() => setOpen(!open)}
-            />
-          }
-          value={text}
-          onChange={setText}
-          onPasteFile={(file: File) => {
-            attachmentsRef.current?.upload(file);
-            setOpen(true);
-          }}
-          onSubmit={() => {
-            setText("");
-            handleSend(text);
-          }}
-          allowSpeech={{
-            recording,
-            onRecordingChange: (nextRecording: boolean) => {
-              console.log("Recording:", nextRecording);
-              if (nextRecording) {
-                sttFromMic();
-              }
-              setRecording(nextRecording);
-            },
-          }}
-          className={styles.sender}
-        />
-      </div>
-    </div>
+      </Header>
+      <Layout style={{ marginTop: "64px" }}>
+        <Layout.Sider
+          collapsible
+          collapsed={!leftSiderOpen}
+          onCollapse={(collapsed) => setLeftSiderOpen(!collapsed)}
+          width={300} // Increase sider width
+          collapsedWidth={0} // Ensure the sider is completely closed
+          style={{ background: "#fff" }}
+        >
+          <div style={{ padding: "16px" }}>Left Sider Content</div>
+        </Layout.Sider>
+        <Layout>
+          <Content style={{ padding: "0px" }}> {/* Reduce empty gap */}
+            <div className={styles.chat}>
+              <Bubble.List
+                items={[{ content: placeholderNode, variant: "borderless" }]}
+              />
+              <div className={styles.messages}>
+                {messages.map((message) => renderMessage(message.message))}
+                <div ref={messagesEndRef} />
+              </div>
+              <Sender
+                ref={senderRef}
+                header={senderHeader}
+                prefix={
+                  <Button
+                    type="text"
+                    icon={<LinkOutlined />}
+                    onClick={() => setOpen(!open)}
+                  />
+                }
+                value={text}
+                onChange={setText}
+                onPasteFile={(file: File) => {
+                  attachmentsRef.current?.upload(file);
+                  setOpen(true);
+                }}
+                onSubmit={() => {
+                  setText("");
+                  handleSend(text);
+                }}
+                allowSpeech={{
+                  recording,
+                  onRecordingChange: (nextRecording: boolean) => {
+                    console.log("Recording:", nextRecording);
+                    if (nextRecording) {
+                      sttFromMic();
+                    }
+                    setRecording(nextRecording);
+                  },
+                }}
+                className={styles.sender}
+              />
+            </div>
+          </Content>
+        </Layout>
+        <Layout.Sider
+          collapsible
+          collapsed={!rightSiderOpen}
+          onCollapse={(collapsed) => setRightSiderOpen(!collapsed)}
+          width={300} // Increase sider width
+          collapsedWidth={0} // Ensure the sider is completely closed
+          style={{ background: "#fff" }}
+          reverseArrow
+        >
+          <div style={{ padding: "16px" }}>Right Sider Content</div>
+        </Layout.Sider>
+      </Layout>
+    </Layout>
   );
 };
 
