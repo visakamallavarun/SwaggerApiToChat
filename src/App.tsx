@@ -142,34 +142,47 @@ export interface ChatResponse {
 export type EndpointList = string[];
 
 const { Panel } = Collapse;
-const QueryStringComponent: React.FC = () => {
-  const [queryParams, setQueryParams] = useState<Record<string, string>>({
-    param1: "value1",
-    param2: "value2",
-    param3: "value3",
-  });
-
+const QueryStringComponent: React.FC<{ queryParams: Record<string, string>; setQueryParams: React.Dispatch<React.SetStateAction<Record<string, string>>> }> = ({ queryParams, setQueryParams }) => {
   const [newKey, setNewKey] = useState<string>("");
   const [newValue, setNewValue] = useState<string>("");
 
+  const storeQueryParams = async (updatedParams: Record<string, string>) => {
+    try {
+      const response = await axios.post(
+        "https://localhost:7049/api/speech",
+        {
+          params: updatedParams,
+        }
+      );
+      console.log("Successfully stored query params:", response.data);
+    } catch (error) {
+      console.error("Failed to store query params:", error);
+    }
+  };
+
+  const updateQueryParams = (updatedParams: Record<string, string>) => {
+    setQueryParams(updatedParams);
+    storeQueryParams(updatedParams); // Post updated queryParams
+  };
+
   const handleAddQueryParam = () => {
     if (newKey.trim() && newValue.trim()) {
-      setQueryParams((prev) => ({ ...prev, [newKey.trim()]: newValue.trim() }));
+      const updatedParams = { ...queryParams, [newKey.trim()]: newValue.trim() };
+      updateQueryParams(updatedParams);
       setNewKey("");
       setNewValue("");
     }
   };
 
   const handleDeleteQueryParam = (key: string) => {
-    setQueryParams((prev) => {
-      const updatedParams = { ...prev };
-      delete updatedParams[key];
-      return updatedParams;
-    });
+    const updatedParams = { ...queryParams };
+    delete updatedParams[key];
+    updateQueryParams(updatedParams);
   };
 
   const handleEditQueryParam = (key: string, value: string) => {
-    setQueryParams((prev) => ({ ...prev, [key]: value }));
+    const updatedParams = { ...queryParams, [key]: value };
+    updateQueryParams(updatedParams);
   };
 
   return (
@@ -264,7 +277,7 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({ debugData })
                 border: `1px solid ${getStatusColor(statusCode)}`,
               }}
             >
-              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{debug}</pre>
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{JSON.stringify(JSON.parse(debug), null, 2)}</pre>
             </div>
           );
         })}
@@ -342,6 +355,7 @@ const App: React.FC = () => {
   const [recording, setRecording] = useState<boolean>(false);
   const [actions, setActions] = useState<string[]>([]); // State to store actions
   const [debugData, setDebugData] = useState<string[]>([]); // State to store debug data
+  const [queryParams, setQueryParams] = useState<Record<string, string>>({}); // Move queryParams to App
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [leftSiderOpen, setLeftSiderOpen] = useState<boolean>(true);
   const [rightSiderOpen, setRightSiderOpen] = useState<boolean>(true);
@@ -716,20 +730,20 @@ const App: React.FC = () => {
           reverseArrow
         >
           <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Menu
-        mode="horizontal"
-        selectedKeys={[activeTab]}
-        onClick={(e) => setActiveTab(e.key)}
-        style={{ marginBottom: "16px" }}
-      >
-        <Menu.Item key="query">Query Strings</Menu.Item>
-        <Menu.Item key="debug">Debug Console</Menu.Item>
-      </Menu>
-      <div style={{ flex: 1, overflowY: "auto" }}>
-        {activeTab === "query" && <QueryStringComponent />}
-        {activeTab === "debug" && <DebugConsoleComponent debugData={debugData} />}
-      </div>
-    </div>
+            <Menu
+              mode="horizontal"
+              selectedKeys={[activeTab]}
+              onClick={(e) => setActiveTab(e.key)}
+              style={{ marginBottom: "16px" }}
+            >
+              <Menu.Item key="query">Query Strings</Menu.Item>
+              <Menu.Item key="debug">Debug Console</Menu.Item>
+            </Menu>
+            <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+              {activeTab === "query" && <QueryStringComponent queryParams={queryParams} setQueryParams={setQueryParams} />}
+              {activeTab === "debug" && <DebugConsoleComponent debugData={debugData} />}
+            </div>
+          </div>
         </Layout.Sider>
       </Layout>
     </Layout>
