@@ -388,6 +388,39 @@ export const getAllActions = async (
   }
 };
 
+const ttsFromText = async (text: string) => {
+  try {
+    const tokenObj = await getTokenOrRefresh();
+    const speechConfig = speechsdk.SpeechConfig.fromAuthorizationToken(
+      tokenObj?.authToken,
+      tokenObj?.region
+    );
+    speechConfig.speechSynthesisLanguage = "en-US"; // Set the language
+    speechConfig.speechSynthesisVoiceName = "en-US-JennyNeural"; // Set the voice
+
+    const audioConfig = speechsdk.AudioConfig.fromDefaultSpeakerOutput();
+    const synthesizer = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
+
+    synthesizer.speakTextAsync(
+      text,
+      (result) => {
+        if (result.reason === speechsdk.ResultReason.SynthesizingAudioCompleted) {
+          console.log("Speech synthesis completed.");
+        } else {
+          console.error("Speech synthesis failed:", result.errorDetails);
+        }
+        synthesizer.close();
+      },
+      (error) => {
+        console.error("Speech synthesis error:", error);
+        synthesizer.close();
+      }
+    );
+  } catch (error) {
+    console.error("Error in text-to-speech:", error);
+  }
+};
+
 const App: React.FC = () => {
   const { styles } = useStyle();
   const [open, setOpen] = useState<boolean>(false);
@@ -601,6 +634,12 @@ const App: React.FC = () => {
               content: responseData.response,
               role: "agent",
             });
+
+            // Trigger text-to-speech for the response
+            if (responseData.speachResponse) {
+              ttsFromText(responseData.speachResponse);
+            }
+            
           } catch (error) {
             if (axios.isAxiosError(error)) {
               console.error(
