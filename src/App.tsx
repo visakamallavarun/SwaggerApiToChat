@@ -15,7 +15,20 @@ import {
   useXChat,
   Welcome,
 } from "@ant-design/x";
-import { Button, Layout, Space, type GetProp, type GetRef, Collapse, Input,  Tag, Menu, Card, List, Tooltip, Typography } from "antd";
+import {
+  Button,
+  Layout,
+  Space,
+  type GetProp,
+  type GetRef,
+  Collapse,
+  Input,
+  Menu,
+  Card,
+  List,
+  Tooltip,
+  Typography,
+} from "antd";
 import { getTokenOrRefresh } from "./token_util";
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
 import { createStyles } from "antd-style";
@@ -142,18 +155,18 @@ export interface ChatResponse {
 export type EndpointList = string[];
 
 const { Panel } = Collapse;
-const QueryStringComponent: React.FC<{ queryParams: Record<string, string>; setQueryParams: React.Dispatch<React.SetStateAction<Record<string, string>>> }> = ({ queryParams, setQueryParams }) => {
+const QueryStringComponent: React.FC<{
+  queryParams: Record<string, string>;
+  setQueryParams: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}> = ({ queryParams, setQueryParams }) => {
   const [newKey, setNewKey] = useState<string>("");
   const [newValue, setNewValue] = useState<string>("");
 
   const storeQueryParams = async (updatedParams: Record<string, string>) => {
     try {
-      const response = await axios.post(
-        "https://localhost:7049/api/speech",
-        {
-          params: updatedParams,
-        }
-      );
+      const response = await axios.post("https://localhost:7049/api/speech", {
+        params: updatedParams,
+      });
       console.log("Successfully stored query params:", response.data);
     } catch (error) {
       console.error("Failed to store query params:", error);
@@ -167,7 +180,10 @@ const QueryStringComponent: React.FC<{ queryParams: Record<string, string>; setQ
 
   const handleAddQueryParam = () => {
     if (newKey.trim() && newValue.trim()) {
-      const updatedParams = { ...queryParams, [newKey.trim()]: newValue.trim() };
+      const updatedParams = {
+        ...queryParams,
+        [newKey.trim()]: newValue.trim(),
+      };
       updateQueryParams(updatedParams);
       setNewKey("");
       setNewValue("");
@@ -225,14 +241,20 @@ const QueryStringComponent: React.FC<{ queryParams: Record<string, string>; setQ
         onChange={(e) => setNewValue(e.target.value)}
         style={{ marginTop: "8px" }}
       />
-      <Button type="primary" style={{ marginTop: "8px" }} onClick={handleAddQueryParam}>
+      <Button
+        type="primary"
+        style={{ marginTop: "8px" }}
+        onClick={handleAddQueryParam}
+      >
         Add Query Param
       </Button>
     </div>
   );
 };
 
-const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({ debugData }) => {
+const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({
+  debugData,
+}) => {
   const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return "green";
     if (status >= 400 && status < 500) return "orange";
@@ -277,7 +299,9 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({ debugData })
                 border: `1px solid ${getStatusColor(statusCode)}`,
               }}
             >
-              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{JSON.stringify(JSON.parse(debug), null, 2)}</pre>
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
+                {JSON.stringify(JSON.parse(debug), null, 2)}
+              </pre>
             </div>
           );
         })}
@@ -286,7 +310,10 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({ debugData })
   );
 };
 
-const QuickActionsListComponent: React.FC<{ actions: string[]; onRequest: (message: Message) => void }> = ({ actions, onRequest }) => {
+const QuickActionsListComponent: React.FC<{
+  actions: string[];
+  onRequest: (message: Message) => void;
+}> = ({ actions, onRequest }) => {
   const { Text } = Typography;
 
   const handleClick = (endpoint: string) => {
@@ -299,7 +326,11 @@ const QuickActionsListComponent: React.FC<{ actions: string[]; onRequest: (messa
   };
 
   return (
-    <Card title="🚀 Quick API Actions" bordered={false} style={{ width: "100%" }}>
+    <Card
+      title="🚀 Quick API Actions"
+      bordered={false}
+      style={{ width: "100%" }}
+    >
       <List
         dataSource={actions}
         renderItem={(endpoint) => (
@@ -313,14 +344,17 @@ const QuickActionsListComponent: React.FC<{ actions: string[]; onRequest: (messa
                 transition: "background 0.2s",
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.background = "#f0f5ff";
+                (e.currentTarget as HTMLDivElement).style.background =
+                  "#f0f5ff";
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                (e.currentTarget as HTMLDivElement).style.background =
+                  "transparent";
               }}
             >
               <ApiOutlined style={{ color: "#1890ff", marginRight: 8 }} />
-              <Text style={{ textAlign: "left" }}>{endpoint}</Text> {/* Ensure text is left-aligned */}
+              <Text style={{ textAlign: "left" }}>{endpoint}</Text>{" "}
+              {/* Ensure text is left-aligned */}
             </List.Item>
           </Tooltip>
         )}
@@ -329,13 +363,19 @@ const QuickActionsListComponent: React.FC<{ actions: string[]; onRequest: (messa
   );
 };
 
-export const getAllActions = async (swaggerJson: unknown): Promise<string[]> => {
+export const getAllActions = async (
+  swaggerJson: unknown
+): Promise<string[]> => {
   try {
-    const response = await axios.post<string[]>('https://localhost:7049/api/speech/Actions', swaggerJson, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const response = await axios.post<string[]>(
+      "https://localhost:7049/api/speech/Actions",
+      swaggerJson,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     return response.data;
   } catch (error) {
@@ -343,7 +383,7 @@ export const getAllActions = async (swaggerJson: unknown): Promise<string[]> => 
       const message = error.response?.data || error.message;
       throw new Error(`Request failed: ${message}`);
     }
-    throw new Error('An unknown error occurred.');
+    throw new Error("An unknown error occurred.");
   }
 };
 
@@ -379,7 +419,6 @@ const App: React.FC = () => {
         icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
         title="Hello, I'm Swagger To Chat"
         description="Base on Swagger API, I can help you to get required values for an endpoint."
-
         extra={
           <Space>
             <Button
@@ -452,34 +491,33 @@ const App: React.FC = () => {
   };
 
   const renderMessage = (message: Message) => {
-
     if (message.role === "agent") {
       // Render agent's message with click handler and markdown support
       return (
         <>
-        <Bubble
-          key={message.id}
-          content={
-            <div className="markdown-content">
-              <ReactMarkdown>{message.content}</ReactMarkdown>
-            </div>
-          }
-          //onClick={() => handleBubbleClick(message.content)}
-          style={{ cursor: "pointer" }}
-        />
-        <br/>
+          <Bubble
+            key={message.id}
+            content={
+              <div className="markdown-content">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
+            }
+            //onClick={() => handleBubbleClick(message.content)}
+            style={{ cursor: "pointer" }}
+          />
+          <br />
         </>
       );
     } else if (message.role === "user") {
       // Render user's message with click handler
       return (
         <>
-        <Bubble
-          key={message.id}
-          content={message.content}
-          placement="end" // Align user's message to the right
-        />
-        <br/>
+          <Bubble
+            key={message.id}
+            content={message.content}
+            placement="end" // Align user's message to the right
+          />
+          <br />
         </>
       );
     }
@@ -510,67 +548,78 @@ const App: React.FC = () => {
         onError(new Error("Message is undefined"));
         return;
       }
-    if (message.role === "user") {
-      try {
-        const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
-        
-        // Skip if no swagger JSON is available
-        if (!swaggerJsonContent) {
-          onSuccess({
-            id: Date.now().toString(),
-            content: "Please upload a Swagger JSON file first.",
-            role: "agent",
-          });
-          return;
-        }
-        
-        const swaggerJson = JSON.parse(swaggerJsonContent);
-        
-        // Prepare the request payload
-        const payload = {
-          text: message.content,
-          swaggerJson: swaggerJson
-        };
-        
-        // Call the swaggerChat endpoint
+      if (message.role === "user") {
         try {
-          const response = await axios.post<ChatResponse>(
-            "https://localhost:7049/api/speech/UnifiedChatbotHandler",
-            payload,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                "Accept": "*/*",
-              },
-            }
-          );
+          const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
 
-          const responseData = response.data;
-          console.log("Response from swaggerChat API:", responseData);
-          if(responseData.debugerResponse) {
-            console.log("Debug response:", responseData.debugerResponse);
-            setDebugData((prev) => responseData?.debugerResponse ? [...prev, responseData.debugerResponse] : prev); 
+          // Skip if no swagger JSON is available
+          if (!swaggerJsonContent) {
+            onSuccess({
+              id: Date.now().toString(),
+              content: "Please upload a Swagger JSON file first.",
+              role: "agent",
+            });
+            return;
           }
-          
-          // Send the AI response back to the chat
-          onSuccess({
-            id: `chat-${Date.now()}`,
-            content: responseData.response,
-            role: "agent",
-          });
+
+          const swaggerJson = JSON.parse(swaggerJsonContent);
+
+          // Prepare the request payload
+          const payload = {
+            text: message.content,
+            swaggerJson: swaggerJson,
+          };
+
+          // Call the swaggerChat endpoint
+          try {
+            const response = await axios.post<ChatResponse>(
+              "https://localhost:7049/api/speech/UnifiedChatbotHandler",
+              payload,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Accept: "*/*",
+                },
+              }
+            );
+
+            const responseData = response.data;
+            console.log("Response from swaggerChat API:", responseData);
+            if (responseData.debugerResponse) {
+              console.log("Debug response:", responseData.debugerResponse);
+              setDebugData((prev) =>
+                responseData?.debugerResponse
+                  ? [...prev, responseData.debugerResponse]
+                  : prev
+              );
+            }
+
+            // Send the AI response back to the chat
+            onSuccess({
+              id: `chat-${Date.now()}`,
+              content: responseData.response,
+              role: "agent",
+            });
+          } catch (error) {
+            if (axios.isAxiosError(error)) {
+              console.error(
+                "Axios error:",
+                error.response?.data || error.message
+              );
+            } else {
+              console.error("Unexpected error:", error);
+            }
+            throw new Error(
+              "Failed to process your request. Please try again."
+            );
+          }
         } catch (error) {
-          if (axios.isAxiosError(error)) {
-            console.error("Axios error:", error.response?.data || error.message);
-          } else {
-            console.error("Unexpected error:", error);
-          }
-          throw new Error("Failed to process your request. Please try again.");
+          console.error("Error calling swaggerChat API:", error);
+          onError(
+            new Error("Failed to process your request. Please try again.")
+          );
         }
-      } catch (error) {
-        console.error("Error calling swaggerChat API:", error);
-        onError(new Error("Failed to process your request. Please try again."));
       }
-    }
     },
   });
 
@@ -673,10 +722,17 @@ const App: React.FC = () => {
           collapsedWidth={0} // Ensure the sider is completely closed
           style={{ background: "#fff" }}
         >
-          {actions.length > 0 && <QuickActionsListComponent actions={actions} onRequest={onRequest} />}
+          {actions.length > 0 && (
+            <QuickActionsListComponent
+              actions={actions}
+              onRequest={onRequest}
+            />
+          )}
         </Layout.Sider>
         <Layout>
-          <Content style={{ padding: "0px" }}> {/* Reduce empty gap */}
+          <Content style={{ padding: "0px" }}>
+            {" "}
+            {/* Reduce empty gap */}
             <div className={styles.chat}>
               <Bubble.List
                 items={[{ content: placeholderNode, variant: "borderless" }]}
@@ -729,7 +785,9 @@ const App: React.FC = () => {
           style={{ background: "#fff" }}
           reverseArrow
         >
-          <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+          <div
+            style={{ height: "100%", display: "flex", flexDirection: "column" }}
+          >
             <Menu
               mode="horizontal"
               selectedKeys={[activeTab]}
@@ -740,8 +798,15 @@ const App: React.FC = () => {
               <Menu.Item key="debug">Debug Console</Menu.Item>
             </Menu>
             <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-              {activeTab === "query" && <QueryStringComponent queryParams={queryParams} setQueryParams={setQueryParams} />}
-              {activeTab === "debug" && <DebugConsoleComponent debugData={debugData} />}
+              {activeTab === "query" && (
+                <QueryStringComponent
+                  queryParams={queryParams}
+                  setQueryParams={setQueryParams}
+                />
+              )}
+              {activeTab === "debug" && (
+                <DebugConsoleComponent debugData={debugData} />
+              )}
             </div>
           </div>
         </Layout.Sider>
