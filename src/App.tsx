@@ -219,37 +219,21 @@ const QueryStringComponent: React.FC = () => {
   );
 };
 
-const DebugConsoleComponent: React.FC = () => {
-  const fakeResponses = [
-    { status: 200, body: "Success response from API" },
-    { status: 400, body: "Bad request error" },
-    { status: 500, body: "Internal server error" },
-    {
-      status: 200,
-      body: `{
-        "data": {
-          "id": 1,
-          "name": "Sample Data",
-          "description": "This is a detailed description of the response data.",
-          "nested": {
-            "key1": "value1",
-            "key2": "value2",
-            "key3": "value3"
-          }
-        },
-        "meta": {
-          "timestamp": "2023-01-01T00:00:00Z",
-          "status": "success"
-        }
-      }`,
-    },
-  ];
-
+const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({ debugData }) => {
   const getStatusColor = (status: number) => {
     if (status >= 200 && status < 300) return "green";
     if (status >= 400 && status < 500) return "orange";
     if (status >= 500) return "red";
     return "blue";
+  };
+
+  const extractStatusCode = (debug: string): number => {
+    try {
+      const parsed = JSON.parse(debug);
+      return parsed.status || 200; // Default to 200 if no status is found
+    } catch {
+      return 200; // Default to 200 for non-JSON strings
+    }
   };
 
   return (
@@ -267,42 +251,36 @@ const DebugConsoleComponent: React.FC = () => {
     >
       <h3>Debug Console</h3>
       <div style={{ flex: 1, overflowY: "auto" }}>
-        {fakeResponses.map((response, index) => (
-          <div
-            key={index}
-            style={{
-              marginBottom: "8px",
-              padding: "8px",
-              borderRadius: "4px",
-              background: "#fff",
-              border: `1px solid ${getStatusColor(response.status)}`,
-            }}
-          >
-            <Tag color={getStatusColor(response.status)}>{response.status}</Tag>
-            <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{response.body}</pre>
-          </div>
-        ))}
+        {debugData.map((debug, index) => {
+          const statusCode = extractStatusCode(debug);
+          return (
+            <div
+              key={index}
+              style={{
+                marginBottom: "8px",
+                padding: "8px",
+                borderRadius: "4px",
+                background: "#fff",
+                border: `1px solid ${getStatusColor(statusCode)}`,
+              }}
+            >
+              <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{debug}</pre>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
-const QuickActionsListComponent: React.FC<{ onRequest: (message: Message) => void }> = ({ onRequest }) => {
+const QuickActionsListComponent: React.FC<{ actions: string[]; onRequest: (message: Message) => void }> = ({ actions, onRequest }) => {
   const { Text } = Typography;
-
-  const endpoints = [
-    "/api/v1/users",
-    "/api/v1/products",
-    "/api/v1/orders",
-    "/api/v1/categories",
-    "/api/v1/reports",
-  ];
 
   const handleClick = (endpoint: string) => {
     console.log(`Selected endpoint: ${endpoint}`);
     onRequest({
       id: Date.now().toString(),
-      content: `Selected endpoint: ${endpoint}`,
+      content: `${endpoint}`,
       role: "user",
     });
   };
@@ -310,7 +288,7 @@ const QuickActionsListComponent: React.FC<{ onRequest: (message: Message) => voi
   return (
     <Card title="🚀 Quick API Actions" bordered={false} style={{ width: "100%" }}>
       <List
-        dataSource={endpoints}
+        dataSource={actions}
         renderItem={(endpoint) => (
           <Tooltip title="Click to select endpoint" placement="right">
             <List.Item
@@ -329,7 +307,7 @@ const QuickActionsListComponent: React.FC<{ onRequest: (message: Message) => voi
               }}
             >
               <ApiOutlined style={{ color: "#1890ff", marginRight: 8 }} />
-              <Text>{endpoint}</Text>
+              <Text style={{ textAlign: "left" }}>{endpoint}</Text> {/* Ensure text is left-aligned */}
             </List.Item>
           </Tooltip>
         )}
@@ -340,14 +318,14 @@ const QuickActionsListComponent: React.FC<{ onRequest: (message: Message) => voi
 
 export const getAllActions = async (swaggerJson: unknown): Promise<string[]> => {
   try {
-    const response = await axios.post<string[]>('/api/Actions', swaggerJson, {
+    const response = await axios.post<string[]>('https://localhost:7049/api/speech/Actions', swaggerJson, {
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
     return response.data;
-  } catch (error: any) {
+  } catch (error) {
     if (axios.isAxiosError(error)) {
       const message = error.response?.data || error.message;
       throw new Error(`Request failed: ${message}`);
@@ -362,6 +340,8 @@ const App: React.FC = () => {
   const [items, setItems] = useState<GetProp<AttachmentsProps, "items">>([]);
   const [text, setText] = useState<string>("");
   const [recording, setRecording] = useState<boolean>(false);
+  const [actions, setActions] = useState<string[]>([]); // State to store actions
+  const [debugData, setDebugData] = useState<string[]>([]); // State to store debug data
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [leftSiderOpen, setLeftSiderOpen] = useState<boolean>(true);
   const [rightSiderOpen, setRightSiderOpen] = useState<boolean>(true);
@@ -431,20 +411,26 @@ const App: React.FC = () => {
 
   const handleFileRead = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const content = event.target?.result as string;
-      if (content != "") {
+      if (content !== "") {
         try {
           localStorage.setItem("swaggerJsonContent", content);
           console.log("Swagger JSON content saved to local storage");
+
+          // Trigger getAllActions and update state
+          const parsedContent = JSON.parse(content);
+          const actionsList = await getAllActions(parsedContent);
+          setActions(actionsList);
+
           onRequest({
             id: Date.now().toString(),
             content: "File uploaded successfully.", // This will be caught by our useXAgent handler
             role: "agent",
           });
         } catch (error) {
-          console.error("Error saving to localStorage:", error);
-          // Handle localStorage errors (e.g., quota exceeded)
+          console.error("Error processing file:", error);
+          // Handle errors (e.g., invalid JSON or API failure)
         }
       }
     };
@@ -533,27 +519,39 @@ const App: React.FC = () => {
         };
         
         // Call the swaggerChat endpoint
-        const response = await fetch("https://localhost:7049/api/speech/UnifiedChatbotHandler", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "*/*"
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        try {
+          const response = await axios.post<ChatResponse>(
+            "https://localhost:7049/api/speech/UnifiedChatbotHandler",
+            payload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "Accept": "*/*",
+              },
+            }
+          );
+
+          const responseData = response.data;
+          console.log("Response from swaggerChat API:", responseData);
+          if(responseData.debugerResponse) {
+            console.log("Debug response:", responseData.debugerResponse);
+            setDebugData((prev) => responseData?.debugerResponse ? [...prev, responseData.debugerResponse] : prev); 
+          }
+          
+          // Send the AI response back to the chat
+          onSuccess({
+            id: `chat-${Date.now()}`,
+            content: responseData.response,
+            role: "agent",
+          });
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            console.error("Axios error:", error.response?.data || error.message);
+          } else {
+            console.error("Unexpected error:", error);
+          }
+          throw new Error("Failed to process your request. Please try again.");
         }
-        
-        const responseData = await response.text();
-        
-        // Send the AI response back to the chat
-        onSuccess({
-          id: `chat-${Date.now()}`,
-          content: responseData,
-          role: "agent"
-        });
       } catch (error) {
         console.error("Error calling swaggerChat API:", error);
         onError(new Error("Failed to process your request. Please try again."));
@@ -661,7 +659,7 @@ const App: React.FC = () => {
           collapsedWidth={0} // Ensure the sider is completely closed
           style={{ background: "#fff" }}
         >
-          <QuickActionsListComponent onRequest={onRequest} />
+          {actions.length > 0 && <QuickActionsListComponent actions={actions} onRequest={onRequest} />}
         </Layout.Sider>
         <Layout>
           <Content style={{ padding: "0px" }}> {/* Reduce empty gap */}
@@ -727,9 +725,9 @@ const App: React.FC = () => {
         <Menu.Item key="query">Query Strings</Menu.Item>
         <Menu.Item key="debug">Debug Console</Menu.Item>
       </Menu>
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+      <div style={{ flex: 1, overflowY: "auto" }}>
         {activeTab === "query" && <QueryStringComponent />}
-        {activeTab === "debug" && <DebugConsoleComponent />}
+        {activeTab === "debug" && <DebugConsoleComponent debugData={debugData} />}
       </div>
     </div>
         </Layout.Sider>
