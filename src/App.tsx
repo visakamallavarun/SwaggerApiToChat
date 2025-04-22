@@ -139,6 +139,9 @@ const useStyle = createStyles(({ token, css }) => ({
     overflow-y: auto;
     padding: 16px;
   `,
+  placeholder: css`
+    padding-top: 32px;
+  `,
 }));
 
 type Message = {
