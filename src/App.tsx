@@ -442,7 +442,7 @@ const App: React.FC = () => {
   const senderRef = useRef<GetRef<typeof Sender>>(null);
 
   const openSwaggerBackendApiPage = () => {
-    window.open("https://fakerestapi.azurewebsites.net/index.html", "_blank"); // Open in a new tab
+    window.open("https://localhost:7049", "_blank"); // Open in a new tab
   };
 
   const scrollToBottom = () => {
