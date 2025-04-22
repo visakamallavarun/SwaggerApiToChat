@@ -275,6 +275,14 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({
     }
   };
 
+  const extractJson = (debug: string):string=> {
+    try {
+      return JSON.stringify(JSON.parse(debug), null, 2);
+    } catch {
+      return debug; // Default to 200 for non-JSON strings
+    }
+  };
+
   return (
     <div
       style={{
@@ -304,7 +312,7 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({
               }}
             >
               <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-                {JSON.stringify(JSON.parse(debug), null, 2)}
+                {extractJson(debug)}
               </pre>
             </div>
           );
@@ -399,7 +407,7 @@ const ttsFromText = async (text: string) => {
       tokenObj?.region
     );
     speechConfig.speechSynthesisLanguage = "en-US"; // Set the language
-    speechConfig.speechSynthesisVoiceName = "en-US-JennyNeural"; // Set the voice
+    speechConfig.speechSynthesisVoiceName = "en-US-AvaMultilingualNeural"; // Set the voice
 
     const audioConfig = speechsdk.AudioConfig.fromDefaultSpeakerOutput();
     const synthesizer = new speechsdk.SpeechSynthesizer(speechConfig, audioConfig);
@@ -442,7 +450,7 @@ const App: React.FC = () => {
   const senderRef = useRef<GetRef<typeof Sender>>(null);
 
   const openSwaggerBackendApiPage = () => {
-    window.open("https://localhost:7049", "_blank"); // Open in a new tab
+    window.open("https://localhost:7049/swagger/index.html", "_blank"); // Open in a new tab
   };
 
   const scrollToBottom = () => {
@@ -725,7 +733,7 @@ const App: React.FC = () => {
       <Header className={styles.header}>
         <div className={styles.headerLogo}>
           <img src="ais.svg" alt="AIS Logo" />
-          <text>AIS Chat</text>
+          <text>API AI Agent</text>
         </div>
       </Header>
       <Layout style={{ marginTop: "64px" }}>
