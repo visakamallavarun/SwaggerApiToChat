@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./index.css";
 import {
+  ApiOutlined,
   CloudUploadOutlined,
   LinkOutlined,
   ShareAltOutlined,
@@ -14,12 +15,13 @@ import {
   useXChat,
   Welcome,
 } from "@ant-design/x";
-import { Button, Layout, Space, type GetProp, type GetRef, Collapse, Input,  Tag, Menu } from "antd";
+import { Button, Layout, Space, type GetProp, type GetRef, Collapse, Input,  Tag, Menu, Card, List, Tooltip, Typography } from "antd";
 import { getTokenOrRefresh } from "./token_util";
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
 import { createStyles } from "antd-style";
 import ReactMarkdown from "react-markdown";
 import { Content, Header } from "antd/es/layout/layout";
+import axios from "axios";
 
 const useStyle = createStyles(({ token, css }) => {
   return {
@@ -131,11 +133,15 @@ type Message = {
   role: "user" | "agent";
 };
 
+export interface ChatResponse {
+  response: string;
+  speachResponse?: string;
+  debugerResponse?: string;
+}
 
 export type EndpointList = string[];
 
 const { Panel } = Collapse;
-
 const QueryStringComponent: React.FC = () => {
   const [queryParams, setQueryParams] = useState<Record<string, string>>({
     param1: "value1",
@@ -254,6 +260,7 @@ const DebugConsoleComponent: React.FC = () => {
         border: "1px solid #ddd",
         padding: "16px",
         background: "#f9f9f9",
+        borderRadius: "4px",
         display: "flex",
         flexDirection: "column",
       }}
@@ -280,26 +287,73 @@ const DebugConsoleComponent: React.FC = () => {
   );
 };
 
-const RightSiderContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<string>("query");
+const QuickActionsListComponent: React.FC<{ onRequest: (message: Message) => void }> = ({ onRequest }) => {
+  const { Text } = Typography;
+
+  const endpoints = [
+    "/api/v1/users",
+    "/api/v1/products",
+    "/api/v1/orders",
+    "/api/v1/categories",
+    "/api/v1/reports",
+  ];
+
+  const handleClick = (endpoint: string) => {
+    console.log(`Selected endpoint: ${endpoint}`);
+    onRequest({
+      id: Date.now().toString(),
+      content: `Selected endpoint: ${endpoint}`,
+      role: "user",
+    });
+  };
 
   return (
-    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <Menu
-        mode="horizontal"
-        selectedKeys={[activeTab]}
-        onClick={(e) => setActiveTab(e.key)}
-        style={{ marginBottom: "16px" }}
-      >
-        <Menu.Item key="query">Query Strings</Menu.Item>
-        <Menu.Item key="debug">Debug Console</Menu.Item>
-      </Menu>
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
-        {activeTab === "query" && <QueryStringComponent />}
-        {activeTab === "debug" && <DebugConsoleComponent />}
-      </div>
-    </div>
+    <Card title="🚀 Quick API Actions" bordered={false} style={{ width: "100%" }}>
+      <List
+        dataSource={endpoints}
+        renderItem={(endpoint) => (
+          <Tooltip title="Click to select endpoint" placement="right">
+            <List.Item
+              onClick={() => handleClick(endpoint)}
+              style={{
+                cursor: "pointer",
+                padding: "8px 12px",
+                borderRadius: "8px",
+                transition: "background 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLDivElement).style.background = "#f0f5ff";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLDivElement).style.background = "transparent";
+              }}
+            >
+              <ApiOutlined style={{ color: "#1890ff", marginRight: 8 }} />
+              <Text>{endpoint}</Text>
+            </List.Item>
+          </Tooltip>
+        )}
+      />
+    </Card>
   );
+};
+
+export const getAllActions = async (swaggerJson: unknown): Promise<string[]> => {
+  try {
+    const response = await axios.post<string[]>('/api/Actions', swaggerJson, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    if (axios.isAxiosError(error)) {
+      const message = error.response?.data || error.message;
+      throw new Error(`Request failed: ${message}`);
+    }
+    throw new Error('An unknown error occurred.');
+  }
 };
 
 const App: React.FC = () => {
@@ -311,6 +365,7 @@ const App: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [leftSiderOpen, setLeftSiderOpen] = useState<boolean>(true);
   const [rightSiderOpen, setRightSiderOpen] = useState<boolean>(true);
+  const [activeTab, setActiveTab] = useState<string>("query");
 
   const attachmentsRef = useRef<GetRef<typeof Attachments>>(null);
   const senderRef = useRef<GetRef<typeof Sender>>(null);
@@ -606,7 +661,7 @@ const App: React.FC = () => {
           collapsedWidth={0} // Ensure the sider is completely closed
           style={{ background: "#fff" }}
         >
-          <div style={{ padding: "16px" }}>Left Sider Content</div>
+          <QuickActionsListComponent onRequest={onRequest} />
         </Layout.Sider>
         <Layout>
           <Content style={{ padding: "0px" }}> {/* Reduce empty gap */}
@@ -662,7 +717,21 @@ const App: React.FC = () => {
           style={{ background: "#fff" }}
           reverseArrow
         >
-          <RightSiderContent />
+          <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Menu
+        mode="horizontal"
+        selectedKeys={[activeTab]}
+        onClick={(e) => setActiveTab(e.key)}
+        style={{ marginBottom: "16px" }}
+      >
+        <Menu.Item key="query">Query Strings</Menu.Item>
+        <Menu.Item key="debug">Debug Console</Menu.Item>
+      </Menu>
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        {activeTab === "query" && <QueryStringComponent />}
+        {activeTab === "debug" && <DebugConsoleComponent />}
+      </div>
+    </div>
         </Layout.Sider>
       </Layout>
     </Layout>
