@@ -36,109 +36,110 @@ import ReactMarkdown from "react-markdown";
 import { Content, Header } from "antd/es/layout/layout";
 import axios from "axios";
 
-const useStyle = createStyles(({ token, css }) => {
-  return {
-    layout: css`
-      width: 100%;
-      min-width: 1000px;
-      height: 722px;
-      border-radius: ${token.borderRadius}px;
-      display: flex;
-      background: ${token.colorBgContainer};
-      font-family: AlibabaPuHuiTi, ${token.fontFamily}, sans-serif;
-
-      .ant-prompts {
-        color: ${token.colorText};
-      }
-    `,
-    menu: css`
-      background: ${token.colorBgLayout}80;
-      width: 280px;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    `,
-    conversations: css`
-      padding: 0 12px;
-      flex: 1;
-      overflow-y: auto;
-    `,
-    chat: css`
-      height: 100%;
-      width: 100%;
-      max-width: 700px;
-      margin: 0 auto;
-      box-sizing: border-box;
-      display: flex;
-      flex-direction: column;
-      padding: ${token.paddingLG}px;
-      gap: 16px;
-      position: relative;
-    `,
-    messages: css`
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      height: calc(100% - 160px); /* Adjust based on sender height */
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 4px;
-
-      /* Remove justify-content: flex-end to allow scrolling to the top */
-      /* Instead, add padding at the top to ensure there's space to scroll */
-      padding-top: 20px;
-
-      /* Hide scrollbar for Chrome, Safari and Opera */
-      &::-webkit-scrollbar {
-        display: none;
-      }
-
-      /* Hide scrollbar for IE, Edge and Firefox */
-      -ms-overflow-style: none; /* IE and Edge */
-      scrollbar-width: none; /* Firefox */
-    `,
-    placeholder: css`
-      padding-top: 32px;
-    `,
-    sender: css`
-      box-shadow: ${token.boxShadow};
-      position: sticky;
-      bottom: 0%;
-      background: ${token.colorBgContainer};
-      margin-top: auto; /* Push to the bottom */
-      width: 100%;
-    `,
-    logo: css`
-      display: flex;
-      height: 72px;
-      align-items: center;
-      justify-content: start;
-      padding: 0 24px;
-      box-sizing: border-box;
-
-      img {
-        width: 24px;
-        height: 24px;
-        display: inline-block;
-      }
-
-      span {
-        display: inline-block;
-        margin: 0 8px;
-        font-weight: bold;
-        color: ${token.colorText};
-        font-size: 16px;
-      }
-    `,
-    addBtn: css`
-      background: #1677ff0f;
-      border: 1px solid #1677ff34;
-      width: calc(100% - 24px);
-      margin: 0 12px 24px 12px;
-    `,
-  };
-});
+const useStyle = createStyles(({ token, css }) => ({
+  layout: css`
+    width: 100%;
+    min-width: 1000px;
+    height: 722px;
+    border-radius: ${token.borderRadius}px;
+    display: flex;
+    background: ${token.colorBgContainer};
+    font-family: AlibabaPuHuiTi, ${token.fontFamily}, sans-serif;
+    .ant-prompts {
+      color: ${token.colorText};
+    }
+  `,
+  menu: css`
+    background: ${token.colorBgLayout}80;
+    width: 280px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  `,
+  menuHorizontal: css`
+    margin-bottom: 16px;
+  `,
+  header: css`
+    position: fixed;
+    top: 0;
+    z-index: 1000;
+    width: 100%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: #001529;
+    color: #fff;
+  `,
+  headerLogo: css`
+    display: flex;
+    align-items: center;
+    img {
+      height: 40px;
+      margin-right: 16px;
+    }
+    text {
+      font-size: 18px;
+      font-weight: bold;
+      color: #fff;
+      margin-top: 8px;
+      margin-left: 20px;
+    }
+  `,
+  sider: css`
+    background: #fff;
+  `,
+  chatContent: css`
+    padding: 0px;
+  `,
+  chat: css`
+    height: 100%;
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    padding: ${token.paddingLG}px;
+    gap: 16px;
+    position: relative;
+  `,
+  messages: css`
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 160px);
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    padding-top: 20px;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  `,
+  sender: css`
+    box-shadow: ${token.boxShadow};
+    position: sticky;
+    bottom: 0%;
+    background: ${token.colorBgContainer};
+    margin-top: auto;
+    width: 100%;
+  `,
+  rightSider: css`
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  `,
+  tabContent: css`
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+  `,
+}));
 
 type Message = {
   id: string;
@@ -679,38 +680,10 @@ const App: React.FC = () => {
 
   return (
     <Layout className={styles.layout}>
-      <Header
-        style={{
-          position: "fixed",
-          top: 0,
-          zIndex: 1000,
-          width: "100%",
-          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 24px",
-          background: "#001529",
-          color: "#fff",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center" }}>
-          <img
-            src="ais.svg"
-            alt="AIS Logo"
-            style={{ height: "40px", marginRight: "16px" }}
-          />
-          <text
-            style={{
-              fontSize: "18px",
-              fontWeight: "bold",
-              color: "#fff",
-              marginTop: "8px",
-              marginLeft: "20px",
-            }}
-          >
-            AIS Chat
-          </text>
+      <Header className={styles.header}>
+        <div className={styles.headerLogo}>
+          <img src="ais.svg" alt="AIS Logo" />
+          <text>AIS Chat</text>
         </div>
       </Header>
       <Layout style={{ marginTop: "64px" }}>
@@ -718,21 +691,16 @@ const App: React.FC = () => {
           collapsible
           collapsed={!leftSiderOpen}
           onCollapse={(collapsed) => setLeftSiderOpen(!collapsed)}
-          width={300} // Increase sider width
-          collapsedWidth={0} // Ensure the sider is completely closed
-          style={{ background: "#fff" }}
+          width={300}
+          collapsedWidth={0}
+          className={styles.sider}
         >
           {actions.length > 0 && (
-            <QuickActionsListComponent
-              actions={actions}
-              onRequest={onRequest}
-            />
+            <QuickActionsListComponent actions={actions} onRequest={onRequest} />
           )}
         </Layout.Sider>
         <Layout>
-          <Content style={{ padding: "0px" }}>
-            {" "}
-            {/* Reduce empty gap */}
+          <Content className={styles.chatContent}>
             <div className={styles.chat}>
               <Bubble.List
                 items={[{ content: placeholderNode, variant: "borderless" }]}
@@ -780,24 +748,22 @@ const App: React.FC = () => {
           collapsible
           collapsed={!rightSiderOpen}
           onCollapse={(collapsed) => setRightSiderOpen(!collapsed)}
-          width={400} // Increase sider width
-          collapsedWidth={0} // Ensure the sider is completely closed
-          style={{ background: "#fff" }}
+          width={400}
+          collapsedWidth={0}
+          className={styles.sider}
           reverseArrow
         >
-          <div
-            style={{ height: "100%", display: "flex", flexDirection: "column" }}
-          >
+          <div className={styles.rightSider}>
             <Menu
               mode="horizontal"
               selectedKeys={[activeTab]}
               onClick={(e) => setActiveTab(e.key)}
-              style={{ marginBottom: "16px" }}
+              className={styles.menuHorizontal}
             >
               <Menu.Item key="query">Query Strings</Menu.Item>
               <Menu.Item key="debug">Debug Console</Menu.Item>
             </Menu>
-            <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+            <div className={styles.tabContent}>
               {activeTab === "query" && (
                 <QueryStringComponent
                   queryParams={queryParams}
