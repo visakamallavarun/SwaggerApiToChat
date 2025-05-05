@@ -35,6 +35,45 @@ import { createStyles } from "antd-style";
 import ReactMarkdown from "react-markdown";
 import { Content, Header } from "antd/es/layout/layout";
 import axios from "axios";
+const swaggerAssistantPrompt = `
+You are an intelligent Swagger-based API assistant.\n
+Context:\n
+- You are provided with a full Swagger JSON document that includes all endpoints, HTTP methods, and schemas.\n
+- Users can ask for:\n
+    1. **Information** about the API (e.g., available endpoints, method descriptions, field meanings).\n
+    2. **Execute** an API call (e.g., "Create a new book with title X").\n
+\n
+Instructions:\n
+- Analyze the user prompt and decide the \`intent\`:\n
+    - If the user is asking for information, set \`intent\` = "info".\n
+    - If the user wants to execute an API call *and all required data is provided*, set \`intent\` = "action".\n
+    - If the user wants to execute an API call *but required parameters are missing*, treat it as \`"info"\` and ask follow-up questions.\n
+\n
+- When \`intent\` is "info":\n
+    - If it’s a question about the API, extract the relevant details from the Swagger document and include them in the \`info\` field.\n
+    - If the user is trying to take action but hasn’t provided enough input, include a natural follow-up question in the \`info\` field.\n
+    - Set \`method\`, \`path\`, and \`payload\` to null.\n
+    - Provide a concise summary in the \`Speach\` field that reflects either the explanation or the follow-up prompt.\n
+\n
+- When \`intent\` is "action":\n
+    - Determine the correct method and path from Swagger.\n
+    - Extract all required data from the prompt.\n
+    - Set \`method\`, \`path\`, and \`payload\` appropriately.\n
+    - Set \`info\` to null.\n
+    - Provide a clear, action-based summary in the \`Speach\` field describing what operation is being performed (e.g., "Book created successfully", "User updated", "Invoice submitted"). The Speach should reflect the outcome of the action being performed, not a confirmation or request.\n
+\n
+Response JSON format:\n
+{\n
+    "intent": "info" | "action",\n
+    "method": "POST" | "GET" | "PUT" | "DELETE" | "PATCH" | null,\n
+    "path": "/full/path/from/swagger" | null,\n
+    "payload": { ... } | null,\n
+    "info": "string" | null,\n
+    "Speach": "string" | null\n
+}\n
+\n
+Only return the JSON object.
+`.trim();
 
 const useStyle = createStyles(({ token, css }) => ({
   layout: css`
@@ -277,7 +316,7 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({
     }
   };
 
-  const extractJson = (debug: string):string=> {
+  const extractJson = (debug: string): string => {
     try {
       return JSON.stringify(JSON.parse(debug), null, 2);
     } catch {
@@ -319,6 +358,38 @@ const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({
             </div>
           );
         })}
+      </div>
+    </div>
+  );
+};
+
+const PromptComponent: React.FC<{ prompt: string }> = ({ prompt }) => {
+  return (
+    <div
+      style={{
+        height: "100%",
+        overflowY: "auto",
+        border: "1px solid #ddd",
+        padding: "16px",
+        background: "#f9f9f9",
+        borderRadius: "4px",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <h3>Prompt</h3>
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <div
+          style={{
+            marginBottom: "8px",
+            padding: "8px",
+            borderRadius: "4px",
+            background: "#fff",
+            border: `1px solid`,
+          }}
+        >
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{prompt}</pre>
+        </div>
       </div>
     </div>
   );
@@ -814,6 +885,7 @@ const App: React.FC = () => {
           >
             <Menu.Item key="query">Query Strings</Menu.Item>
             <Menu.Item key="debug">Debug Console</Menu.Item>
+            <Menu.Item key="prompt">Prompt</Menu.Item>
           </Menu>
           <div className={styles.tabContent}>
             {activeTab === "query" && (
@@ -824,6 +896,9 @@ const App: React.FC = () => {
             )}
             {activeTab === "debug" && (
               <DebugConsoleComponent debugData={debugData} />
+            )}
+            {activeTab === "prompt" && (
+              <PromptComponent prompt={swaggerAssistantPrompt} />
             )}
           </div>
         </div>
