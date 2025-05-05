@@ -35,6 +35,7 @@ import { createStyles } from "antd-style";
 import ReactMarkdown from "react-markdown";
 import { Content, Header } from "antd/es/layout/layout";
 import axios from "axios";
+
 const swaggerAssistantPrompt = `
 You are an intelligent Swagger-based API assistant.\n
 Context:\n
@@ -200,6 +201,7 @@ export interface ChatResponse {
 export type EndpointList = string[];
 
 const { Panel } = Collapse;
+
 const QueryStringComponent: React.FC<{
   queryParams: Record<string, string>;
   setQueryParams: React.Dispatch<React.SetStateAction<Record<string, string>>>;
@@ -209,7 +211,7 @@ const QueryStringComponent: React.FC<{
 
   const storeQueryParams = async (updatedParams: Record<string, string>) => {
     try {
-      const response = await axios.post("https://localhost:7049/api/speech", {
+      const response = await axios.post("https://localhost:7049/api/speech/store-query-params", {
         params: updatedParams,
       });
       console.log("Successfully stored query params:", response.data);
@@ -292,6 +294,103 @@ const QueryStringComponent: React.FC<{
         onClick={handleAddQueryParam}
       >
         Add Query Param
+      </Button>
+    </div>
+  );
+};
+
+const HeaderStringComponent: React.FC<{
+  headerParams: Record<string, string>;
+  setHeaderParams: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+}> = ({ headerParams, setHeaderParams }) => {
+  const [newKey, setNewKey] = useState<string>("");
+  const [newValue, setNewValue] = useState<string>("");
+
+  const storeHeaderParams = async (updatedParams: Record<string, string>) => {
+    try {
+      const response = await axios.post("https://localhost:7049/api/speech/store-header-params", {
+        headers: updatedParams,
+      });
+      console.log("Successfully stored header params:", response.data);
+    } catch (error) {
+      console.error("Failed to store header params:", error);
+    }
+  };
+
+  const updateHeaderParams = (updatedParams: Record<string, string>) => {
+    setHeaderParams(updatedParams);
+    storeHeaderParams(updatedParams); // Post updated headerParams
+  };
+
+  const handleAddHeaderParam = () => {
+    if (newKey.trim() && newValue.trim()) {
+      const updatedParams = {
+        ...headerParams,
+        [newKey.trim()]: newValue.trim(),
+      };
+      updateHeaderParams(updatedParams);
+      setNewKey("");
+      setNewValue("");
+    }
+  };
+
+  const handleDeleteHeaderParam = (key: string) => {
+    const updatedParams = { ...headerParams };
+    delete updatedParams[key];
+    updateHeaderParams(updatedParams);
+  };
+
+  const handleEditHeaderParam = (key: string, value: string) => {
+    const updatedParams = { ...headerParams, [key]: value };
+    updateHeaderParams(updatedParams);
+  };
+
+  return (
+    <div>
+      <h3>Header Parameters</h3>
+      <Collapse>
+        {Object.entries(headerParams).map(([key, value]) => (
+          <Panel
+            header={key}
+            key={key}
+            extra={
+              <Button
+                type="link"
+                danger
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteHeaderParam(key);
+                }}
+              >
+                Delete
+              </Button>
+            }
+          >
+            <Input
+              value={value}
+              onChange={(e) => handleEditHeaderParam(key, e.target.value)}
+            />
+          </Panel>
+        ))}
+      </Collapse>
+      <Input
+        placeholder="Key"
+        value={newKey}
+        onChange={(e) => setNewKey(e.target.value)}
+        style={{ marginTop: "8px" }}
+      />
+      <Input
+        placeholder="Value"
+        value={newValue}
+        onChange={(e) => setNewValue(e.target.value)}
+        style={{ marginTop: "8px" }}
+      />
+      <Button
+        type="primary"
+        style={{ marginTop: "8px" }}
+        onClick={handleAddHeaderParam}
+      >
+        Add Header Param
       </Button>
     </div>
   );
@@ -514,6 +613,7 @@ const App: React.FC = () => {
   const [actions, setActions] = useState<string[]>([]); // State to store actions
   const [debugData, setDebugData] = useState<string[]>([]); // State to store debug data
   const [queryParams, setQueryParams] = useState<Record<string, string>>({}); // Move queryParams to App
+  const [headerParams, setHeaderParams] = useState<Record<string, string>>({}); // State for headerParams
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [leftSiderOpen, setLeftSiderOpen] = useState<boolean>(true);
   const [rightSiderOpen, setRightSiderOpen] = useState<boolean>(true);
@@ -883,16 +983,22 @@ const App: React.FC = () => {
             onClick={(e) => setActiveTab(e.key)}
             className={styles.menuHorizontal}
           >
-            <Menu.Item key="query">Query Strings</Menu.Item>
+            <Menu.Item key="query">Http</Menu.Item>
             <Menu.Item key="debug">Debug Console</Menu.Item>
             <Menu.Item key="prompt">Prompt</Menu.Item>
           </Menu>
           <div className={styles.tabContent}>
             {activeTab === "query" && (
+              <>
               <QueryStringComponent
                 queryParams={queryParams}
                 setQueryParams={setQueryParams}
               />
+              <HeaderStringComponent
+                headerParams={headerParams}
+                setHeaderParams={setHeaderParams}
+              />
+              </>
             )}
             {activeTab === "debug" && (
               <DebugConsoleComponent debugData={debugData} />
