@@ -404,12 +404,18 @@ const UrlPathComponent: React.FC<{
 
   const handleSendUrlPath = async () => {
     try {
-      const response = await axios.post("https://localhost:7049/api/speech/store-url-path", {
-        path: urlPath,
-      });
+      const response = await axios.post(
+        "https://localhost:7049/api/speech/store-url-path",
+        JSON.stringify(urlPath), // Send urlPath as a JSON string
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "*/*",
+          },
+        }
+      );
       setIsSubmitted(true);
       console.log("Successfully sent URL path:", response.data);
-       // Disable input and button after submission
     } catch (error) {
       console.error("Failed to send URL path:", error);
     }
@@ -976,7 +982,7 @@ const App: React.FC = () => {
     <Header className={styles.header}>
       <div className={styles.headerLogo}>
         <img src="ais.svg" alt="AIS Logo" />
-        <text>API AI Agent</text>
+        <text>API AI Agent POC (V1)</text>
       </div>
     </Header>
     <Layout style={{ marginTop: "64px", height: "calc(100vh - 64px)" }}>
