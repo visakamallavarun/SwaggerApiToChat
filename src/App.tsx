@@ -807,6 +807,35 @@ const App: React.FC = () => {
         onError(new Error("Message is undefined"));
         return;
       }
+      if (message.role === "agent") {
+        const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
+        if (message.content === "File uploaded successfully." && swaggerJsonContent) {
+          const swaggerJson = JSON.parse(swaggerJsonContent);
+          const payload = {
+            text: "What is this API about?",
+            swaggerJson: swaggerJson,
+          };
+          try {
+            const response = await axios.post<ChatResponse>(
+              "https://localhost:7049/api/speech/UnifiedChatbotHandler",
+              payload,
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                  Accept: "*/*",
+                },
+              }
+            );
+            const responseData = response.data;
+            console.log("Response from swaggerChat API:", responseData);
+            if (responseData.speachResponse) {
+              ttsFromText(responseData.speachResponse);
+            }
+          }catch (error) {
+            console.error("Error calling swaggerChat API:", error);
+          }
+        }
+      }
       if (message.role === "user") {
         try {
           const swaggerJsonContent = localStorage.getItem("swaggerJsonContent");
