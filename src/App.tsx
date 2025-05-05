@@ -91,10 +91,12 @@ const useStyle = createStyles(({ token, css }) => ({
     background: #fff;
   `,
   chatContent: css`
-    padding: 0px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   `,
   chat: css`
-    height: 100%;
+    flex: 1; // Allow the chat to stretch
     width: 100%;
     max-width: 700px;
     margin: 0 auto;
@@ -729,105 +731,105 @@ const App: React.FC = () => {
   );
 
   return (
-    <Layout className={styles.layout}>
-      <Header className={styles.header}>
-        <div className={styles.headerLogo}>
-          <img src="ais.svg" alt="AIS Logo" />
-          <text>API AI Agent</text>
-        </div>
-      </Header>
-      <Layout style={{ marginTop: "64px" }}>
-        <Layout.Sider
-          collapsible
-          collapsed={!leftSiderOpen}
-          onCollapse={(collapsed) => setLeftSiderOpen(!collapsed)}
-          width={300}
-          collapsedWidth={0}
-          className={styles.sider}
-        >
-          {actions.length > 0 && (
-            <QuickActionsListComponent actions={actions} onRequest={onRequest} />
-          )}
-        </Layout.Sider>
-        <Layout>
-          <Content className={styles.chatContent}>
-            <div className={styles.chat}>
-              <Bubble.List
-                items={[{ content: placeholderNode, variant: "borderless" }]}
-              />
-              <div className={styles.messages}>
-                {messages.map((message) => renderMessage(message.message))}
-                <div ref={messagesEndRef} />
-              </div>
-              <Sender
-                ref={senderRef}
-                header={senderHeader}
-                prefix={
-                  <Button
-                    type="text"
-                    icon={<LinkOutlined />}
-                    onClick={() => setOpen(!open)}
-                  />
-                }
-                value={text}
-                onChange={setText}
-                onPasteFile={(file: File) => {
-                  attachmentsRef.current?.upload(file);
-                  setOpen(true);
-                }}
-                onSubmit={() => {
-                  setText("");
-                  handleSend(text);
-                }}
-                allowSpeech={{
-                  recording,
-                  onRecordingChange: (nextRecording: boolean) => {
-                    console.log("Recording:", nextRecording);
-                    if (nextRecording) {
-                      sttFromMic();
-                    }
-                    setRecording(nextRecording);
-                  },
-                }}
-                className={styles.sender}
-              />
+    <Layout className={styles.layout} style={{ height: "100vh" }}>
+    <Header className={styles.header}>
+      <div className={styles.headerLogo}>
+        <img src="ais.svg" alt="AIS Logo" />
+        <text>API AI Agent</text>
+      </div>
+    </Header>
+    <Layout style={{ marginTop: "64px", height: "calc(100vh - 64px)" }}>
+      <Layout.Sider
+        collapsible
+        collapsed={!leftSiderOpen}
+        onCollapse={(collapsed) => setLeftSiderOpen(!collapsed)}
+        width={300}
+        collapsedWidth={0}
+        className={styles.sider}
+      >
+        {actions.length > 0 && (
+          <QuickActionsListComponent actions={actions} onRequest={onRequest} />
+        )}
+      </Layout.Sider>
+      <Layout>
+        <Content className={styles.chatContent}>
+          <div className={styles.chat}>
+            <Bubble.List
+              items={[{ content: placeholderNode, variant: "borderless" }]}
+            />
+            <div className={styles.messages}>
+              {messages.map((message) => renderMessage(message.message))}
+              <div ref={messagesEndRef} />
             </div>
-          </Content>
-        </Layout>
-        <Layout.Sider
-          collapsible
-          collapsed={!rightSiderOpen}
-          onCollapse={(collapsed) => setRightSiderOpen(!collapsed)}
-          width={400}
-          collapsedWidth={0}
-          className={styles.sider}
-          reverseArrow
-        >
-          <div className={styles.rightSider}>
-            <Menu
-              mode="horizontal"
-              selectedKeys={[activeTab]}
-              onClick={(e) => setActiveTab(e.key)}
-              className={styles.menuHorizontal}
-            >
-              <Menu.Item key="query">Query Strings</Menu.Item>
-              <Menu.Item key="debug">Debug Console</Menu.Item>
-            </Menu>
-            <div className={styles.tabContent}>
-              {activeTab === "query" && (
-                <QueryStringComponent
-                  queryParams={queryParams}
-                  setQueryParams={setQueryParams}
+            <Sender
+              ref={senderRef}
+              header={senderHeader}
+              prefix={
+                <Button
+                  type="text"
+                  icon={<LinkOutlined />}
+                  onClick={() => setOpen(!open)}
                 />
-              )}
-              {activeTab === "debug" && (
-                <DebugConsoleComponent debugData={debugData} />
-              )}
-            </div>
+              }
+              value={text}
+              onChange={setText}
+              onPasteFile={(file: File) => {
+                attachmentsRef.current?.upload(file);
+                setOpen(true);
+              }}
+              onSubmit={() => {
+                setText("");
+                handleSend(text);
+              }}
+              allowSpeech={{
+                recording,
+                onRecordingChange: (nextRecording: boolean) => {
+                  console.log("Recording:", nextRecording);
+                  if (nextRecording) {
+                    sttFromMic();
+                  }
+                  setRecording(nextRecording);
+                },
+              }}
+              className={styles.sender}
+            />
           </div>
-        </Layout.Sider>
+        </Content>
       </Layout>
+      <Layout.Sider
+        collapsible
+        collapsed={!rightSiderOpen}
+        onCollapse={(collapsed) => setRightSiderOpen(!collapsed)}
+        width={400}
+        collapsedWidth={0}
+        className={styles.sider}
+        reverseArrow
+      >
+        <div className={styles.rightSider}>
+          <Menu
+            mode="horizontal"
+            selectedKeys={[activeTab]}
+            onClick={(e) => setActiveTab(e.key)}
+            className={styles.menuHorizontal}
+          >
+            <Menu.Item key="query">Query Strings</Menu.Item>
+            <Menu.Item key="debug">Debug Console</Menu.Item>
+          </Menu>
+          <div className={styles.tabContent}>
+            {activeTab === "query" && (
+              <QueryStringComponent
+                queryParams={queryParams}
+                setQueryParams={setQueryParams}
+              />
+            )}
+            {activeTab === "debug" && (
+              <DebugConsoleComponent debugData={debugData} />
+            )}
+          </div>
+        </div>
+      </Layout.Sider>
     </Layout>
+  </Layout>
   );
 };
 
