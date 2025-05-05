@@ -136,7 +136,7 @@ const useStyle = createStyles(({ token, css }) => ({
     flex-direction: column;
   `,
   chat: css`
-    flex: 1; // Allow the chat to stretch
+    height: 100%;
     width: 100%;
     max-width: 700px;
     margin: 0 auto;
@@ -396,6 +396,46 @@ const HeaderStringComponent: React.FC<{
   );
 };
 
+const UrlPathComponent: React.FC<{
+  urlPath: string;
+  setUrlPath: React.Dispatch<React.SetStateAction<string>>;
+}> = ({ urlPath, setUrlPath }) => {
+  const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
+
+  const handleSendUrlPath = async () => {
+    try {
+      const response = await axios.post("https://localhost:7049/api/speech/store-url-path", {
+        path: urlPath,
+      });
+      setIsSubmitted(true);
+      console.log("Successfully sent URL path:", response.data);
+       // Disable input and button after submission
+    } catch (error) {
+      console.error("Failed to send URL path:", error);
+    }
+  };
+
+  return (
+    <div>
+      <h3>URL Path</h3>
+      <Input
+        placeholder="Enter URL Path"
+        value={urlPath}
+        onChange={(e) => setUrlPath(e.target.value)}
+        style={{ marginBottom: "8px" }}
+        disabled={isSubmitted} // Disable input after submission
+      />
+      <Button
+        type="primary"
+        onClick={handleSendUrlPath}
+        disabled={isSubmitted} // Disable button after submission
+      >
+        Send URL Path
+      </Button>
+    </div>
+  );
+};
+
 const DebugConsoleComponent: React.FC<{ debugData: string[] }> = ({
   debugData,
 }) => {
@@ -614,6 +654,7 @@ const App: React.FC = () => {
   const [debugData, setDebugData] = useState<string[]>([]); // State to store debug data
   const [queryParams, setQueryParams] = useState<Record<string, string>>({}); // Move queryParams to App
   const [headerParams, setHeaderParams] = useState<Record<string, string>>({}); // State for headerParams
+  const [urlPath, setUrlPath] = useState<string>(""); // State for URL Path
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [leftSiderOpen, setLeftSiderOpen] = useState<boolean>(true);
   const [rightSiderOpen, setRightSiderOpen] = useState<boolean>(true);
@@ -990,6 +1031,7 @@ const App: React.FC = () => {
           <div className={styles.tabContent}>
             {activeTab === "query" && (
               <>
+              <UrlPathComponent urlPath={urlPath} setUrlPath={setUrlPath} />
               <QueryStringComponent
                 queryParams={queryParams}
                 setQueryParams={setQueryParams}
